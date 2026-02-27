@@ -8,7 +8,7 @@
   box-sizing: border-box;
 }
 
-/* ── Empty / no-data state ───────────────────────────────────────────────── */
+/* ── Empty / no-data / multi-value state ─────────────────────────────────── */
 .senseav-empty {
   display: flex;
   align-items: center;
@@ -72,14 +72,52 @@
   background: rgba(0, 0, 0, 0.55);
 }
 
-/* ── IFRAME mode: web page / shared post embed ───────────────────────────── */
-.senseav-iframe {
-  background: #fff;
+/* ── LINK mode: click-to-open card (CSP-blocked or shared-post URLs) ──────── */
+.senseav-link {
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.senseav-frame {
-  width: 100%;
-  height: 100%;
-  border: none;
-  display: block;
+.senseav-open-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 32px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #e0e0e0;
+  text-decoration: none;
+  font-family: sans-serif;
+  max-width: 90%;
+  transition: background 0.2s, border-color 0.2s;
+  cursor: pointer;
+}
+
+.senseav-open-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.senseav-open-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.senseav-open-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.senseav-open-url {
+  font-size: 11px;
+  color: #888;
+  word-break: break-all;
+  text-align: center;
+  max-width: 400px;
 }

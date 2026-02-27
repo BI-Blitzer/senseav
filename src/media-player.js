@@ -12,8 +12,8 @@ const VIDEO_EXTENSIONS = new Set([
 ]);
 
 // Hostnames whose share/post URLs are web pages, not direct media files.
-// Auto-detection falls back to iframe for these domains.
-const IFRAME_DOMAINS = new Set([
+// These are rendered as a "click to open" card (CSP blocks most iframes).
+const LINK_DOMAINS = new Set([
   'gemini.google.com',
   'grok.com',
   'youtube.com', 'www.youtube.com', 'youtu.be',
@@ -37,7 +37,7 @@ function detectMediaType(url) {
   // 2. Domain-based detection for known share/social platforms
   try {
     const { hostname } = new URL(url);
-    if (IFRAME_DOMAINS.has(hostname)) return 'iframe';
+    if (LINK_DOMAINS.has(hostname)) return 'link';
   } catch (_) {
     // Malformed URL — fall through to default
   }
@@ -46,15 +46,28 @@ function detectMediaType(url) {
 }
 
 export function resolveMediaType(url, override) {
+  // 'iframe' from the old property value → treat as 'link'
+  if (override === 'iframe') return 'link';
   if (override && override !== 'auto') return override;
   return detectMediaType(url);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function showMessage(container, text) {
+  const msg = document.createElement('div');
+  msg.className = 'senseav-empty';
+  msg.textContent = text;
+  container.appendChild(msg);
 }
 
 // ── DOM construction ───────────────────────────────────────────────────────
 
 /**
  * Build the DOM structure inside `container`, initialise the appropriate
- * player, and return the Video.js instance (or null for iframe / no-data).
+ * player, and return the Video.js instance (or null for link / no-data).
+ *
+ * Only renders when qHyperCube.qSize.qcy === 1 (exactly one selected value).
  *
  * DOM layout — VIDEO / AUDIO:
  *   .senseav-root.senseav-{video|audio}
@@ -63,22 +76,34 @@ export function resolveMediaType(url, override) {
  *     └── .senseav-player-wrapper
  *           └── video.video-js
  *
- * DOM layout — IFRAME:
- *   .senseav-root.senseav-iframe
- *     └── iframe.senseav-frame
+ * DOM layout — LINK (shared post / CSP-blocked page):
+ *   .senseav-root.senseav-link
+ *     └── a.senseav-open-card
+ *           ├── span.senseav-open-icon
+ *           ├── span.senseav-open-label
+ *           └── span.senseav-open-url
  *
  * @param {HTMLElement} container  The nebula.js root element.
  * @param {Object}      layout     The Qlik Sense layout object.
  * @returns {Object|null}          Video.js player instance, or null.
  */
 export function mountPlayer(container, layout) {
-  const matrix = layout.qHyperCube?.qDataPages?.[0]?.qMatrix;
+  const { qHyperCube } = layout;
+  const qcy = qHyperCube?.qSize?.qcy ?? 0;
 
+  // ── Single-value guard ─────────────────────────────────────────────────────
+  if (qcy === 0) {
+    showMessage(container, 'Add a dimension containing a media URL to get started.');
+    return null;
+  }
+  if (qcy > 1) {
+    showMessage(container, 'Select a single value to load media.');
+    return null;
+  }
+
+  const matrix = qHyperCube?.qDataPages?.[0]?.qMatrix;
   if (!matrix?.length || !matrix[0][0]?.qText) {
-    const msg = document.createElement('div');
-    msg.className = 'senseav-empty';
-    msg.textContent = 'Add a dimension containing a media URL to get started.';
-    container.appendChild(msg);
+    showMessage(container, 'Add a dimension containing a media URL to get started.');
     return null;
   }
 
@@ -92,21 +117,36 @@ export function mountPlayer(container, layout) {
   const { mediaTypeOverride, autoplay, loop, muted, showControls } = layout;
   const mediaType = resolveMediaType(mediaUrl, mediaTypeOverride);
 
-  // ── IFRAME mode ────────────────────────────────────────────────────────────
-  if (mediaType === 'iframe') {
+  // ── LINK mode (shared post / page — renders a click-to-open card) ──────────
+  if (mediaType === 'link') {
     const root = document.createElement('div');
-    root.className = 'senseav-root senseav-iframe';
+    root.className = 'senseav-root senseav-link';
     container.appendChild(root);
 
-    const frame = document.createElement('iframe');
-    frame.className = 'senseav-frame';
-    frame.setAttribute('src', mediaUrl);
-    frame.setAttribute('allowfullscreen', '');
-    frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; clipboard-write');
-    frame.setAttribute('frameborder', '0');
-    root.appendChild(frame);
+    const card = document.createElement('a');
+    card.className = 'senseav-open-card';
+    card.href = mediaUrl;
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
 
-    return null; // No Video.js player
+    const icon = document.createElement('span');
+    icon.className = 'senseav-open-icon';
+    icon.textContent = '⧉';
+
+    const label = document.createElement('span');
+    label.className = 'senseav-open-label';
+    label.textContent = 'Click to open media';
+
+    const urlDisplay = document.createElement('span');
+    urlDisplay.className = 'senseav-open-url';
+    urlDisplay.textContent = mediaUrl;
+
+    card.appendChild(icon);
+    card.appendChild(label);
+    card.appendChild(urlDisplay);
+    root.appendChild(card);
+
+    return null;
   }
 
   // ── AUDIO / VIDEO mode ─────────────────────────────────────────────────────

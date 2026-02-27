@@ -34,7 +34,7 @@ export function ext(galaxy) {
                     { label: 'Auto-detect from URL', value: 'auto' },
                     { label: 'Force Audio', value: 'audio' },
                     { label: 'Force Video', value: 'video' },
-                    { label: 'Embed as Web Page', value: 'iframe' },
+                    { label: 'Open as Link (shared posts)', value: 'link' },
                   ],
                 },
                 autoplay: {
