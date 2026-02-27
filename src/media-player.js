@@ -11,12 +11,38 @@ const VIDEO_EXTENSIONS = new Set([
   'mp4', 'webm', 'ogv', 'avi', 'mov', 'mkv', 'm4v', 'wmv',
 ]);
 
+// Hostnames whose share/post URLs are web pages, not direct media files.
+// Auto-detection falls back to iframe for these domains.
+const IFRAME_DOMAINS = new Set([
+  'gemini.google.com',
+  'grok.com',
+  'youtube.com', 'www.youtube.com', 'youtu.be',
+  'vimeo.com', 'player.vimeo.com',
+  'x.com', 'twitter.com',
+  'facebook.com', 'www.facebook.com',
+  'instagram.com', 'www.instagram.com',
+  'tiktok.com', 'www.tiktok.com',
+  'soundcloud.com', 'w.soundcloud.com',
+  'spotify.com', 'open.spotify.com',
+]);
+
 function detectMediaType(url) {
   if (!url) return 'video';
+
+  // 1. Extension-based detection (fastest, works for direct file URLs)
   const ext = url.split('?')[0].split('.').pop().toLowerCase();
   if (AUDIO_EXTENSIONS.has(ext)) return 'audio';
   if (VIDEO_EXTENSIONS.has(ext)) return 'video';
-  return 'video'; // safe default
+
+  // 2. Domain-based detection for known share/social platforms
+  try {
+    const { hostname } = new URL(url);
+    if (IFRAME_DOMAINS.has(hostname)) return 'iframe';
+  } catch (_) {
+    // Malformed URL — fall through to default
+  }
+
+  return 'video'; // safe default for unrecognised URLs
 }
 
 export function resolveMediaType(url, override) {
@@ -24,27 +50,26 @@ export function resolveMediaType(url, override) {
   return detectMediaType(url);
 }
 
-// ── DOM construction + Video.js initialisation ─────────────────────────────
+// ── DOM construction ───────────────────────────────────────────────────────
 
 /**
- * Build the DOM structure inside `container`, initialise Video.js, and
- * return the player instance (or null when there is no data to display).
+ * Build the DOM structure inside `container`, initialise the appropriate
+ * player, and return the Video.js instance (or null for iframe / no-data).
  *
- * DOM layout for VIDEO:
- *   .senseav-root.senseav-video
+ * DOM layout — VIDEO / AUDIO:
+ *   .senseav-root.senseav-{video|audio}
+ *     ├── .senseav-bg            (audio + bg image only – blurred backdrop)
+ *     ├── .senseav-bg-overlay    (audio + bg image only – dark scrim)
  *     └── .senseav-player-wrapper
  *           └── video.video-js
  *
- * DOM layout for AUDIO (with optional blurred background image):
- *   .senseav-root.senseav-audio
- *     ├── .senseav-bg            (absolute, blurred bg image – optional)
- *     ├── .senseav-bg-overlay    (dark scrim so controls are readable)
- *     └── .senseav-player-wrapper
- *           └── video.video-js
+ * DOM layout — IFRAME:
+ *   .senseav-root.senseav-iframe
+ *     └── iframe.senseav-frame
  *
  * @param {HTMLElement} container  The nebula.js root element.
  * @param {Object}      layout     The Qlik Sense layout object.
- * @returns {Object|null}          Video.js player, or null.
+ * @returns {Object|null}          Video.js player instance, or null.
  */
 export function mountPlayer(container, layout) {
   const matrix = layout.qHyperCube?.qDataPages?.[0]?.qMatrix;
@@ -66,19 +91,36 @@ export function mountPlayer(container, layout) {
 
   const { mediaTypeOverride, autoplay, loop, muted, showControls } = layout;
   const mediaType = resolveMediaType(mediaUrl, mediaTypeOverride);
+
+  // ── IFRAME mode ────────────────────────────────────────────────────────────
+  if (mediaType === 'iframe') {
+    const root = document.createElement('div');
+    root.className = 'senseav-root senseav-iframe';
+    container.appendChild(root);
+
+    const frame = document.createElement('iframe');
+    frame.className = 'senseav-frame';
+    frame.setAttribute('src', mediaUrl);
+    frame.setAttribute('allowfullscreen', '');
+    frame.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; clipboard-write');
+    frame.setAttribute('frameborder', '0');
+    root.appendChild(frame);
+
+    return null; // No Video.js player
+  }
+
+  // ── AUDIO / VIDEO mode ─────────────────────────────────────────────────────
   const isAudio = mediaType === 'audio';
   const hasBg = isAudio && !!bgImageUrl;
 
-  // ── Root wrapper ──────────────────────────────────────────────────────────
   const root = document.createElement('div');
   root.className = `senseav-root senseav-${isAudio ? 'audio' : 'video'}`;
   container.appendChild(root);
 
-  // ── Background image layers (audio only) ──────────────────────────────────
+  // Background image layers (audio with bg image only)
   if (hasBg) {
     const bg = document.createElement('div');
     bg.className = 'senseav-bg';
-    // Use setAttribute for the style so the URL never touches innerHTML
     bg.style.backgroundImage = `url("${bgImageUrl.replace(/\\/g, '/').replace(/"/g, '%22')}")`;
     root.appendChild(bg);
 
@@ -87,7 +129,7 @@ export function mountPlayer(container, layout) {
     root.appendChild(overlay);
   }
 
-  // ── Player wrapper + video element ────────────────────────────────────────
+  // Player wrapper + video element
   const playerWrapper = document.createElement('div');
   playerWrapper.className = 'senseav-player-wrapper';
   root.appendChild(playerWrapper);
@@ -96,16 +138,13 @@ export function mountPlayer(container, layout) {
   videoEl.className = 'video-js vjs-default-skin';
   playerWrapper.appendChild(videoEl);
 
-  // ── Initialise Video.js ───────────────────────────────────────────────────
   const player = videojs(videoEl, {
     controls: showControls !== false,
     autoplay: !!autoplay,
     loop: !!loop,
     muted: !!muted,
-    // fill: true makes Video.js stretch to the parent element (video mode)
-    fill: !isAudio,
-    // audio: true activates the compact audio-only control bar
-    audio: isAudio,
+    fill: !isAudio,   // fill container for video; audio uses natural height
+    audio: isAudio,   // compact control bar for audio
     preload: 'metadata',
     sources: [{ src: mediaUrl }],
   });
@@ -114,7 +153,7 @@ export function mountPlayer(container, layout) {
 }
 
 /**
- * Safely dispose a Video.js player.
+ * Safely dispose a Video.js player instance.
  * @param {Object|null} player
  */
 export function unmountPlayer(player) {

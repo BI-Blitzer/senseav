@@ -71,3 +71,15 @@
 .senseav-audio .vjs-control-bar {
   background: rgba(0, 0, 0, 0.55);
 }
+
+/* ── IFRAME mode: web page / shared post embed ───────────────────────────── */
+.senseav-iframe {
+  background: #fff;
+}
+
+.senseav-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}

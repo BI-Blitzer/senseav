@@ -1,13 +1,23 @@
 /**
  * Property panel definition for the senseav extension.
- * Adds a "Media Settings" section to the standard appearance accordion.
+ *
+ * The `data` section (uses: 'data') is required — it renders the
+ * Dimensions panel in the Qlik Sense property pane.
+ * The `settings` section adds the custom Media Settings controls.
  */
 export function ext(galaxy) {
   return {
     definition: {
+      type: 'items',
       component: 'accordion',
       items: {
-        appearance: {
+        // ── Dimensions panel ──────────────────────────────────────────────
+        data: {
+          uses: 'data',
+        },
+
+        // ── Custom settings ───────────────────────────────────────────────
+        settings: {
           uses: 'settings',
           items: {
             mediaSettings: {
@@ -24,6 +34,7 @@ export function ext(galaxy) {
                     { label: 'Auto-detect from URL', value: 'auto' },
                     { label: 'Force Audio', value: 'audio' },
                     { label: 'Force Video', value: 'video' },
+                    { label: 'Embed as Web Page', value: 'iframe' },
                   ],
                 },
                 autoplay: {
