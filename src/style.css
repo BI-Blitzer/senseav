@@ -1,0 +1,73 @@
+/* ── Root container ──────────────────────────────────────────────────────── */
+.senseav-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  box-sizing: border-box;
+}
+
+/* ── Empty / no-data state ───────────────────────────────────────────────── */
+.senseav-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #888;
+  font-size: 14px;
+  font-family: sans-serif;
+  text-align: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* ── Blurred background image layer (audio + bg image) ───────────────────── */
+.senseav-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* Scale up slightly so the blur fringe is hidden outside the container */
+  transform: scale(1.08);
+  filter: blur(14px);
+}
+
+/* Dark scrim over the blurred bg so the control bar remains readable */
+.senseav-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.40);
+}
+
+/* ── VIDEO mode: player fills the full container ─────────────────────────── */
+.senseav-video .senseav-player-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.senseav-video .video-js {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── AUDIO mode: control bar pinned to the bottom, bg fills the rest ──────── */
+.senseav-audio .senseav-player-wrapper {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+}
+
+.senseav-audio .video-js {
+  width: 100%;
+}
+
+/* Make the Video.js control bar background semi-transparent in audio mode
+   so the blurred artwork shows through underneath it */
+.senseav-audio .vjs-control-bar {
+  background: rgba(0, 0, 0, 0.55);
+}

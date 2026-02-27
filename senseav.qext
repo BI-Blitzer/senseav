@@ -1,0 +1,11 @@
+{
+  "name": "senseav",
+  "version": "0.1.0",
+  "description": "Audio/Video media player extension for Qlik Sense SaaS and Enterprise",
+  "author": "",
+  "type": "visualization",
+  "supernova": true,
+  "icon": "media",
+  "preview": "preview.png",
+  "keywords": ["media", "audio", "video", "player"]
+}

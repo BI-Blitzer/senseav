@@ -1,0 +1,24 @@
+{
+  "name": "senseav",
+  "version": "0.1.0",
+  "description": "Audio/Video media player extension for Qlik Sense SaaS and Enterprise",
+  "license": "MIT",
+  "main": "dist/senseav.js",
+  "scripts": {
+    "build": "nebula build",
+    "sense": "nebula sense",
+    "serve": "nebula serve --type sn"
+  },
+  "devDependencies": {
+    "@nebula.js/cli": "^4.0.0",
+    "@nebula.js/cli-build": "^4.0.0",
+    "@nebula.js/cli-sense": "^4.0.0",
+    "@nebula.js/cli-serve": "^4.0.0"
+  },
+  "peerDependencies": {
+    "@nebula.js/stardust": "^4.0.0"
+  },
+  "dependencies": {
+    "video.js": "^8.0.0"
+  }
+}

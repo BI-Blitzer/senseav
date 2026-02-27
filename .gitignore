@@ -1,0 +1,4 @@
+node_modules/
+dist/
+senseav-ext/
+*.js.map
