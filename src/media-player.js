@@ -26,18 +26,34 @@ const LINK_DOMAINS = new Set([
   'spotify.com', 'open.spotify.com',
 ]);
 
+function extType(ext) {
+  if (AUDIO_EXTENSIONS.has(ext)) return 'audio';
+  if (VIDEO_EXTENSIONS.has(ext)) return 'video';
+  return null;
+}
+
 function detectMediaType(url) {
   if (!url) return 'video';
 
-  // 1. Extension-based detection (fastest, works for direct file URLs)
-  const ext = url.split('?')[0].split('.').pop().toLowerCase();
-  if (AUDIO_EXTENSIONS.has(ext)) return 'audio';
-  if (VIDEO_EXTENSIONS.has(ext)) return 'video';
-
-  // 2. Domain-based detection for known share/social platforms
   try {
-    const { hostname } = new URL(url);
-    if (LINK_DOMAINS.has(hostname)) return 'link';
+    const parsed = new URL(url);
+
+    // 1. Extension from the URL path (e.g. /file.mp4)
+    const pathExt = parsed.pathname.split('.').pop().toLowerCase();
+    const fromPath = extType(pathExt);
+    if (fromPath) return fromPath;
+
+    // 2. filename= query parameter (e.g. Google CDN:
+    //    contribution.usercontent.google.com/download?...&filename=clip.mp4)
+    const filename = parsed.searchParams.get('filename');
+    if (filename) {
+      const fromFilename = extType(filename.split('.').pop().toLowerCase());
+      if (fromFilename) return fromFilename;
+    }
+
+    // 3. Domain-based detection for known share/social platforms
+    if (LINK_DOMAINS.has(parsed.hostname)) return 'link';
+
   } catch (_) {
     // Malformed URL — fall through to default
   }
